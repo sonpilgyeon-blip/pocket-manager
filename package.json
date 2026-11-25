@@ -1,0 +1,20 @@
+{
+  "name": "pocket-manager",
+  "version": "1.0.0",
+  "private": true,
+  "description": "결제·할 일 관리 개인 AI 비서 (웹앱 + 안드로이드 앱)",
+  "type": "module",
+  "scripts": {
+    "serve": "node serve.mjs",
+    "icons": "node make-icons.mjs",
+    "android:sync": "cap sync android",
+    "android:build": "cap sync android && cd android && gradlew.bat assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/core": "^8.6.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.2"
+  }
+}

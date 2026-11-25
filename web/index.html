@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1f6f5c" />
+  <title>포켓매니저</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1 id="title">홈</h1>
+    <button id="btn-settings" class="icon-btn" aria-label="설정"><span data-icon="settings" data-size="24"></span></button>
+  </header>
+
+  <main id="view" aria-live="polite"></main>
+
+  <nav class="tabbar" aria-label="메뉴">
+    <button data-tab="home" class="active"><span data-icon="home"></span>홈</button>
+    <button data-tab="spend"><span data-icon="card"></span>지출</button>
+    <button data-tab="subs"><span data-icon="repeat"></span>구독</button>
+    <button data-tab="todo"><span data-icon="check"></span>할 일</button>
+    <button data-tab="agent"><span data-icon="bot"></span>AI 비서</button>
+  </nav>
+
+  <dialog id="settings">
+    <form method="dialog" class="sheet" id="settings-form">
+      <h2>설정</h2>
+      <label>사용할 AI
+        <select name="provider">
+          <option value="gemini">Gemini (구글)</option>
+          <option value="claude">Claude (Anthropic)</option>
+        </select>
+      </label>
+      <div data-provider="gemini">
+        <label>Gemini API 키
+          <input name="geminiKey" type="password" autocomplete="off" placeholder="AIza..." />
+          <small>aistudio.google.com → 'Get API key'에서 본인 구글 계정으로 만들어요. 이 휴대폰에만 저장되고 구글 Gemini API로만 전송돼요.</small>
+        </label>
+        <label>Gemini 모델
+          <select name="geminiModel"><option value="gemini-flash-lite-latest">최신 Flash Lite (빠름·추천)</option><option value="gemini-flash-latest">최신 Flash (더 똑똑함·느릴 수 있음)</option></select>
+          <small><button type="button" class="small" id="btn-load-models">모델 불러오기</button> 키를 넣고 누르면 쓸 수 있는 모델이 나와요.</small>
+        </label>
+      </div>
+      <div data-provider="claude">
+        <label>Claude API 키
+          <input name="apiKey" type="password" autocomplete="off" placeholder="sk-ant-..." />
+          <small>console.anthropic.com에서 만들어요. 이 휴대폰에만 저장되고 Claude API로만 전송돼요.</small>
+        </label>
+        <label>Claude 모델
+          <select name="model">
+            <option value="claude-opus-5-5">Claude Opus 5.5 (가장 똑똑함)</option>
+            <option value="claude-sonnet-5-5">Claude Sonnet 5.5 (균형)</option>
+            <option value="claude-haiku-5-5">Claude Haiku 5.5 (가장 저렴·빠름)</option>
+          </select>
+        </label>
+        <label>생각 깊이
+          <select name="effort">
+            <option value="low">낮음 (빠르고 저렴)</option>
+            <option value="medium">보통</option>
+            <option value="high">높음</option>
+          </select>
+        </label>
+      </div>
+      <small class="muted" style="display:block;margin-bottom:10px">API 키는 백업 파일에 들어가지 않아요.</small>
+      <label>월 예산 (원)
+        <input name="monthlyBudget" type="number" inputmode="numeric" min="0" step="10000" />
+      </label>
+      <label>결제 앱 열기 주소
+        <input name="payAppUrl" type="text" />
+        <small>결제 요청을 승인하면 이 앱을 열어요. 기본값은 토스입니다.</small>
+      </label>
+      <label class="ghost file-btn full" style="margin-bottom:10px">결제 내역 파일 더하기 (지메일 등)<input type="file" id="file-merge" accept="application/json,.json" hidden /></label>
+      <div class="row">
+        <button type="button" id="btn-export" class="ghost">백업 내보내기</button>
+        <label class="ghost file-btn">백업 불러오기<input type="file" id="file-import" accept="application/json" hidden /></label>
+      </div>
+      <div class="spend-payees" id="spend-payees-wrap" hidden>
+        <small class="muted">이 사람에게 보낸 이체는 지출로 기록해요. 누르면 빼요.</small>
+        <div class="chips" id="spend-payees"></div>
+      </div>
+      <div class="spend-payees" id="income-senders-wrap" hidden>
+        <small class="muted">이 사람이 보낸 입금은 수입으로 기록해요. 누르면 빼요.</small>
+        <div class="chips" id="income-senders"></div>
+      </div>
+      <details class="recent-log" id="recent-wrap" hidden>
+        <summary>최근 받은 결제·입출금 알림 (확인용)</summary>
+        <small class="muted">기록이 안 된 알림이 있으면 여기서 휴대폰이 무엇을 받았는지 볼 수 있어요. 이 휴대폰 안에만 있어요.</small>
+        <div id="recent-log"></div>
+        <button type="button" class="small ghost" id="btn-clear-recent">기록 지우기</button>
+      </details>
+      <button type="button" id="btn-undo" class="ghost full" style="margin-bottom:10px" hidden>백업 불러오기 전으로 되돌리기</button>
+      <button type="button" id="btn-wipe" class="danger ghost">모든 데이터 지우기</button>
+      <div class="actions">
+        <div id="sheet-toasts" class="sheet-toasts" aria-live="polite"></div>
+        <button value="cancel" class="ghost">닫기</button>
+        <button value="save" id="btn-save-settings" class="primary">저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toasts" popover="manual" role="status" aria-live="polite"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

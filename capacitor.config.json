@@ -1,0 +1,8 @@
+{
+  "appId": "app.pocketmanager.personal",
+  "appName": "포켓매니저",
+  "webDir": "web",
+  "android": {
+    "allowMixedContent": false
+  }
+}

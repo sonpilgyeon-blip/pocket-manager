@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>포켓매니저 휴대폰 테스트</title>
+<style>
+  :root { --bg:#eceae4; --panel:#fff; --ink:#18201d; --muted:#6a746f; --line:#dedbd2; --brand:#1a6b57; --soft:#e1eee9; --warn:#a8481a; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif; background:var(--bg); color:var(--ink); }
+  header { display:flex; align-items:center; gap:12px; padding:12px 20px; background:var(--panel); border-bottom:1px solid var(--line); }
+  header h1 { font-size:18px; margin:0; }
+  header .muted { font-size:13px; }
+  .wrap { display:grid; grid-template-columns:auto minmax(340px, 460px); gap:28px; justify-content:center; padding:24px; align-items:start; }
+  /* 휴대폰 틀 */
+  .stage { display:flex; flex-direction:column; align-items:center; gap:12px; }
+  .phone { position:relative; background:#111; border-radius:44px; padding:14px; box-shadow:0 20px 50px rgba(0,0,0,.25), inset 0 0 0 2px #333; }
+  .screen { position:relative; border-radius:32px; overflow:hidden; background:#000; }
+  .statusbar { height:28px; background:#000; color:#fff; font-size:12px; display:flex; justify-content:space-between; align-items:center; padding:0 18px; font-weight:600; }
+  iframe { display:block; border:0; background:#fff; }
+  .off { position:absolute; inset:28px 0 0; display:none; flex-direction:column; align-items:center; justify-content:center; gap:10px; color:#bbb; background:#0b0b0b; font-size:15px; text-align:center; padding:20px; }
+  .phone.closed .off { display:flex; }
+  /* 휴대폰 알림 배너 흉내 */
+  .banner { position:absolute; left:10px; right:10px; top:36px; background:rgba(30,30,30,.95); color:#fff; border-radius:16px; padding:10px 12px; font-size:13px; line-height:1.4; transform:translateY(-140%); transition:transform .25s; z-index:5; white-space:pre-line; }
+  .banner.show { transform:none; }
+  .banner b { display:block; font-size:12px; color:#9fd8c6; margin-bottom:2px; }
+  /* 오른쪽 조작판 */
+  .panel { display:flex; flex-direction:column; gap:14px; }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px 16px; }
+  section h2 { font-size:15px; margin:0 0 10px; }
+  label { font-size:13px; color:var(--muted); display:block; margin-bottom:8px; }
+  select, textarea, input[type=text] { width:100%; font:inherit; font-size:14px; padding:9px 10px; border:1px solid var(--line); border-radius:10px; background:#faf9f6; margin-top:4px; }
+  textarea { min-height:72px; resize:vertical; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  button { font:inherit; font-size:13px; font-weight:600; border-radius:10px; border:1px solid var(--line); background:#fff; padding:8px 11px; cursor:pointer; }
+  button:hover { border-color:var(--brand); }
+  button.primary { background:var(--brand); color:#fff; border-color:var(--brand); }
+  button.warn { color:var(--warn); }
+  .chips button { background:var(--soft); border-color:transparent; color:var(--brand); }
+  .toggle { display:flex; align-items:center; justify-content:space-between; padding:6px 0; font-size:14px; }
+  .pill { font-size:12px; padding:2px 9px; border-radius:99px; background:#eee; color:#666; }
+  .pill.on { background:var(--soft); color:var(--brand); font-weight:700; }
+  #log { font-family:ui-monospace,Consolas,monospace; font-size:12px; max-height:200px; overflow:auto; background:#faf9f6; border-radius:10px; padding:8px; margin:0; white-space:pre-wrap; }
+  .hint { font-size:12px; color:var(--muted); margin:6px 0 0; }
+  @media (max-width: 900px) { .wrap { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>📱 포켓매니저 휴대폰 테스트</h1>
+  <span class="muted">컴퓨터에서 휴대폰 화면 그대로 앱을 쓰면서, 카드 문자·알림이 오는 상황을 흉내 냅니다. 마우스 클릭 = 손가락 터치.</span>
+</header>
+
+<div class="wrap">
+  <div class="stage">
+    <div class="row">
+      <label style="margin:0">기기
+        <select id="device">
+          <option value="384x854" selected>갤럭시 S21 울트라 · 내 폰 (384×854)</option>
+          <option value="360x780">갤럭시 S24 (360×780)</option>
+          <option value="384x832">갤럭시 S24 울트라 (384×832)</option>
+          <option value="412x915">픽셀 8 (412×915)</option>
+          <option value="320x640">작은 휴대폰 (320×640)</option>
+          <option value="673x841">갤럭시 폴드 펼침 (673×841)</option>
+        </select>
+      </label>
+      <button id="reload">↻ 새로고침</button>
+    </div>
+    <div class="phone" id="phone">
+      <div class="screen" id="screen">
+        <div class="statusbar"><span id="clock">9:41</span><span>📶 🔋</span></div>
+        <div class="banner" id="banner"></div>
+        <iframe id="app" title="포켓매니저 앱 화면"></iframe>
+        <div class="off"><div style="font-size:34px">⏻</div>앱이 꺼져 있어요<br><small>이 동안 온 결제 문자·알림은 휴대폰에 보관됐다가, 앱을 켜면 한 번에 기록돼요.</small></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <section>
+      <h2>앱 상태</h2>
+      <div class="toggle"><span>앱 실행</span><button id="power" class="primary">앱 끄기</button></div>
+      <div class="toggle"><span>문자 읽기 권한</span><span class="row"><span class="pill" id="p-sms">꺼짐</span><button id="t-sms">바꾸기</button></span></div>
+      <div class="toggle"><span>알림 접근 권한</span><span class="row"><span class="pill" id="p-notif">꺼짐</span><button id="t-notif">바꾸기</button></span></div>
+      <div class="toggle"><span>휴대폰에 보관 중</span><span class="pill" id="queue">0건</span></div>
+      <p class="hint">권한은 앱 홈의 '결제 자동 기록 켜기'에서 켜거나, 여기서 바로 바꿀 수 있어요. 권한이 꺼져 있으면 실제 휴대폰처럼 앱이 문자·알림을 받지 못해요.</p>
+    </section>
+
+    <section>
+      <h2>결제 문자·알림 보내기</h2>
+      <div class="row chips" id="presets"></div>
+      <label style="margin-top:10px">직접 쓰기
+        <textarea id="custom" placeholder="[Web발신]&#10;신한카드(1234)승인 홍*동 8,000원(일시불)11/24 12:30 김밥천국"></textarea>
+      </label>
+      <div class="row">
+        <select id="kind" style="width:auto;margin:0"><option value="sms">문자로</option><option value="notification">앱 알림으로</option></select>
+        <button class="primary" id="send">보내기</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>상황 테스트</h2>
+      <div class="row">
+        <button id="s-dup" title="같은 결제가 문자와 카드사 앱 알림으로 거의 동시에 옴">문자+알림 동시 (중복)</button>
+        <button id="s-burst">결제 3건 연달아</button>
+        <button id="s-wallet">토스·카카오페이 결제</button>
+        <button id="s-cancel">결제 취소</button>
+        <button id="s-chat">결제 아닌 문자</button>
+      </div>
+      <p class="hint">'결제 아닌 문자'는 앱이 무시해야 정상이에요. '중복'은 1건만 기록돼야 정상이에요.</p>
+    </section>
+
+    <section>
+      <h2>데이터</h2>
+      <div class="row">
+        <button id="inbox">문자함에 지난 결제 20건 넣기</button>
+        <button id="wipe" class="warn">앱 데이터 모두 지우기</button>
+      </div>
+      <p class="hint">'문자함에 넣기' 후 앱에서 문자 읽기를 허용하면 '지난 90일 가져오기'를 시험할 수 있어요.</p>
+    </section>
+
+    <section>
+      <h2>기록</h2>
+      <pre id="log"></pre>
+    </section>
+  </div>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const iframe = $("#app");
+const state = { running: true, sms: false, notif: false, queue: [], inbox: [], recent: [], listener: null };
+const logBox = $("#log");
+function log(msg) {
+  const t = new Date().toTimeString().slice(0, 8);
+  logBox.textContent = `${t}  ${msg}\n` + logBox.textContent;
+}
+
+// ---------- 앱이 쓰는 가짜 휴대폰 기능 (web/native.js가 연결) ----------
+window.__phoneMock = {
+  create() {
+    state.listener = null;
+    return {
+      isNativePlatform: () => true,
+      isPluginAvailable: (n) => n === "PaymentReader",
+      addListener(plugin, event, cb) { if (plugin === "PaymentReader" && event === "payment") state.listener = cb; },
+      async nativePromise(plugin, method, opts = {}) {
+        switch (method) {
+          case "status": return { sms: state.sms, notifications: state.notif };
+          case "requestSms":
+            if (confirm("[휴대폰 권한 창 흉내]\n포켓매니저에서 문자 메시지를 보고 받도록 허용할까요?")) { state.sms = true; log("문자 권한 허용됨"); }
+            else log("문자 권한 거부됨");
+            paint();
+            return { sms: state.sms, notifications: state.notif };
+          case "openNotificationSettings":
+            setTimeout(() => {
+              if (confirm("[휴대폰 설정 화면 흉내]\n'포켓매니저 결제 알림 읽기'의 알림 접근을 허용할까요?")) { state.notif = true; log("알림 접근 허용됨"); }
+              paint();
+              // 설정에서 앱으로 돌아온 것처럼 알립니다
+              iframe.contentDocument?.dispatchEvent(new Event("visibilitychange"));
+            }, 300);
+            return {};
+          case "drain": {
+            const items = state.queue.splice(0);
+            if (items.length) log(`앱이 켜지며 보관된 ${items.length}건을 가져감`);
+            paint();
+            return { items };
+          }
+          case "readInbox": {
+            if (!state.sms) throw new Error("문자 읽기 권한이 없어요");
+            const since = Date.now() - (opts.days || 90) * 86400000;
+            const items = state.inbox.filter((i) => i.time > since);
+            log(`앱이 문자함에서 ${items.length}건을 읽음`);
+            return { items };
+          }
+          case "recent": return { items: state.recent.slice() };
+          case "clearRecent": state.recent = []; return {};
+          default: return {};
+        }
+      },
+    };
+  },
+};
+
+// 실제 앱(PaymentInbox.java)과 같은 기준으로 결제처럼 보이는 것만 통과시킵니다.
+const looksLikePayment = (t) => (/[\d,]{1,12}\s*원/.test(t) && /승인|결제|취소|사용|일시불|할부|출금|입금|이체|송금|보냈|받았|잔액|체크|카드|페이|누적/.test(t)) || (/입금|출금|이체|송금|잔액/.test(t) && /\d{1,3}(,\d{3})+/.test(t))
+  || (/(USD|EUR|GBP|JPY|CNY|US\$|\$)\s?[\d,]+(\.\d{1,2})?|[\d,]+(\.\d{1,2})?\s?(USD|EUR|JPY|달러|유로|엔)/.test(t) && /승인|결제|사용|일시불|체크|카드/.test(t));
+const PAY_SOURCE = /카드|체크|페이|pay|Pay|PAY|토스|뱅크|은행|승인|결제|입금|출금|이체|송금|잔액/;
+
+function deliver(text, kind = "sms", time = Date.now()) {
+  showBanner(kind === "sms" ? "메시지" : "카드사 앱", text);
+  if (kind === "sms" && !state.sms) return log("문자 도착 → 문자 권한이 없어 앱이 받지 못함");
+  if (kind === "notification" && !state.notif) return log("알림 도착 → 알림 접근 권한이 없어 앱이 받지 못함");
+  const rec = (result) => { state.recent.push({ text, from: kind === "sms" ? "15447200" : "com.kbstar.kbbank", time, result }); state.recent = state.recent.slice(-20); };
+  if (kind === "notification" && !PAY_SOURCE.test(text)) { rec("결제·입출금 단어가 없어 건너뜀"); return log("알림 도착 → 결제가 아니라서 버림"); }
+  if (kind === "notification" && !looksLikePayment(text)) { rec("금액을 찾지 못해 건너뜀"); return log("알림 도착 → 금액이 없어 버림"); }
+  if (looksLikePayment(text)) rec("앱으로 보냄");
+  if (!looksLikePayment(text) || (kind === "notification" && !PAY_SOURCE.test(text))) return log(`${kind === "sms" ? "문자" : "알림"} 도착 → 결제가 아니라서 버림`);
+  const item = { id: Math.random().toString(16).slice(2, 10), text, time, source: kind, from: kind === "sms" ? "15447200" : "com.card.app" };
+  if (state.running && state.listener) {
+    state.listener(item);
+    log(`${kind === "sms" ? "문자" : "알림"} 도착 → 앱이 바로 받음: ${text.replace(/\s+/g, " ").slice(0, 40)}`);
+  } else {
+    state.queue.push(item);
+    log(`${kind === "sms" ? "문자" : "알림"} 도착 → 앱이 꺼져 있어 휴대폰에 보관`);
+  }
+  paint();
+}
+
+// ---------- 예시 문자 ----------
+const md = () => { const d = new Date(); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+const PRESETS = [
+  ["☕ 스타벅스", () => `[Web발신]\n신한카드(1234)승인 홍*동 6,500원(일시불)${md()} 스타벅스 강남점 누적512,300원`],
+  ["🛍️ 쿠팡", () => `[Web발신]\nKB국민카드 1*2*승인\n홍*동님\n45,900원 일시불\n${md()}\n쿠팡`],
+  ["🍚 배민", () => `[Web발신]\n신한카드(1234)승인 홍*동 23,000원(일시불)${md()} 배달의민족`],
+  ["🚌 택시", () => `[Web발신]\n현대카드 [5678] 승인 12,300원 ${md()} 카카오T택시`],
+  ["🔁 넷플릭스", () => `[Web발신]\n신한카드(1234)승인 홍*동 17,000원(일시불)${md()} 넷플릭스`],
+  ["📱 통신비", () => `[Web발신]\n신한카드(1234)승인 홍*동 65,000원(일시불)${md()} SK텔레콤`],
+];
+const box = $("#presets");
+for (const [label, fn] of PRESETS) {
+  const b = document.createElement("button");
+  b.textContent = label;
+  b.title = "문자로 보내기";
+  b.onclick = () => deliver(fn(), "sms");
+  box.append(b);
+}
+$("#send").onclick = () => { const t = $("#custom").value.trim(); if (t) deliver(t, $("#kind").value); };
+
+$("#s-dup").onclick = () => {
+  deliver(`[Web발신]\n신한카드(1234)승인 홍*동 12,500원(일시불)${md()} 올리브영 강남점`, "sms");
+  setTimeout(() => deliver(`신한카드\n12,500원 승인 | 올리브영강남점`, "notification"), 1200);
+};
+$("#s-burst").onclick = () => {
+  [PRESETS[0], PRESETS[2], PRESETS[3]].forEach(([, fn], i) => setTimeout(() => deliver(fn(), "sms"), i * 400));
+};
+$("#s-wallet").onclick = () => {
+  deliver(`토스페이\n신한카드(1234) 10,900원 결제 완료 · 토스페이먼츠`, "notification");
+  setTimeout(() => deliver(`[Web발신]\n신한카드(1234)승인 홍*동 4,900원(일시불)${md()} 카카오페이`, "sms"), 800);
+};
+// 은행 앱 입출금 알림 (금액 뒤에 '원'이 없는 형식 포함)
+const BANK_PRESETS = [
+  ["🏦 입금", () => `KB스타뱅킹\n[KB]${md()}\n123456**789\n홍길동\n입금\n50,000\n잔액359,962`],
+  ["🏦 체크카드 출금", () => `KB스타뱅킹\n[KB]${md()}\n123456**789\n스타벅스\n체크카드출금\n6,500\n잔액353,462`],
+  ["🏦 이체", () => `토스뱅크\n김철수님에게 30,000원을 보냈어요`],
+];
+{
+  const b = document.createElement("button");
+  b.textContent = "🌐 해외결제 문자";
+  b.title = "문자로 보내기";
+  b.onclick = () => deliver(`[국외발신]\nKB국민체크(1234) 홍*동님 ${md()} USD 9.99 승인 STEAM`, "sms");
+  box.append(b);
+}
+for (const [label, fn] of BANK_PRESETS) {
+  const b = document.createElement("button");
+  b.textContent = label;
+  b.title = "은행 앱 알림으로 보내기";
+  b.onclick = () => deliver(fn(), "notification");
+  box.append(b);
+}
+$("#s-cancel").onclick =() => deliver(`[Web발신]\n삼성카드 취소 13,500원 ${md()} 넷플릭스`, "sms");
+$("#s-chat").onclick = () => deliver(`[Web발신]\n엄마: 저녁 먹고 와? 반찬 해 놨어`, "sms");
+
+$("#inbox").onclick = () => {
+  const merchants = [["스타벅스", 5600], ["쿠팡", 32000], ["넷플릭스", 17000], ["배달의민족", 21000], ["GS25", 4300], ["SK텔레콤", 65000], ["카카오페이", 4900], ["올리브영", 18700], ["교보문고", 15000], ["토스페이먼츠", 10900]];
+  for (let i = 0; i < 20; i++) {
+    const [m, a] = merchants[i % merchants.length];
+    const time = Date.now() - (i * 4 + 1) * 86400000;
+    const d = new Date(time);
+    state.inbox.push({ id: "in" + i + Math.random().toString(16).slice(2, 6), time, source: "sms", from: "15447200",
+      text: `[Web발신]\n신한카드(1234)승인 홍*동 ${a.toLocaleString()}원(일시불)${d.getMonth() + 1}/${d.getDate()} 12:00 ${m}` });
+  }
+  log("문자함에 지난 결제 20건을 넣음 (약 80일치)");
+};
+
+$("#wipe").onclick = () => {
+  if (!confirm("테스트 앱의 지출·구독·할 일·설정을 모두 지울까요?")) return;
+  iframe.contentWindow.localStorage.clear();
+  state.queue = []; state.inbox = [];
+  log("앱 데이터를 지움");
+  loadApp();
+};
+
+// ---------- 화면 ----------
+function loadApp() { iframe.src = "/?mock=1&t=" + Date.now(); }
+// 실제 휴대폰처럼 스크롤 막대가 화면 폭을 차지하지 않게 숨깁니다.
+iframe.addEventListener("load", () => { try { iframe.contentDocument.documentElement.style.scrollbarWidth = "none"; } catch {} });
+function sizeTo(v) {
+  const [w, h] = v.split("x").map(Number);
+  iframe.style.width = w + "px";
+  iframe.style.height = h - 28 + "px";
+  $("#screen").style.width = w + "px";
+}
+$("#device").onchange = (e) => { sizeTo(e.target.value); localStorage.setItem("test-device-v2", e.target.value); };
+$("#reload").onclick = loadApp;
+$("#power").onclick = () => {
+  state.running = !state.running;
+  $("#phone").classList.toggle("closed", !state.running);
+  if (state.running) { loadApp(); log("앱 켬"); } else { iframe.src = "about:blank"; state.listener = null; log("앱 끔"); }
+  paint();
+};
+$("#t-sms").onclick = () => { state.sms = !state.sms; log(`문자 권한 ${state.sms ? "켬" : "끔"}`); paint(); iframe.contentDocument?.dispatchEvent(new Event("visibilitychange")); };
+$("#t-notif").onclick = () => { state.notif = !state.notif; log(`알림 권한 ${state.notif ? "켬" : "끔"}`); paint(); iframe.contentDocument?.dispatchEvent(new Event("visibilitychange")); };
+
+function paint() {
+  $("#power").textContent = state.running ? "앱 끄기" : "앱 켜기";
+  for (const [id, on] of [["#p-sms", state.sms], ["#p-notif", state.notif]]) { $(id).textContent = on ? "켜짐" : "꺼짐"; $(id).classList.toggle("on", on); }
+  $("#queue").textContent = `${state.queue.length}건`;
+}
+let bannerTimer;
+function showBanner(from, text) {
+  const b = $("#banner");
+  b.innerHTML = "";
+  const title = document.createElement("b"); title.textContent = from;
+  b.append(title, document.createTextNode(text.replace("[Web발신]\n", "").slice(0, 90)));
+  b.classList.add("show");
+  clearTimeout(bannerTimer);
+  bannerTimer = setTimeout(() => b.classList.remove("show"), 2600);
+}
+setInterval(() => { const d = new Date(); $("#clock").textContent = `${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`; }, 10000);
+
+const saved = localStorage.getItem("test-device-v2");
+if (saved) $("#device").value = saved;
+sizeTo($("#device").value);
+paint();
+loadApp();
+log("테스트 화면 준비됨. 오른쪽 버튼으로 결제 문자를 보내 보세요.");
+</script>
+</body>
+</html>
