@@ -8,7 +8,7 @@
 
 > 화면의 금액·가맹점은 모두 예시 데이터입니다.
 
-**▶ 1분 시연 영상:** [design/demo/pocket-manager-demo.mp4](design/demo/pocket-manager-demo.mp4) (컴퓨터용 테스트 화면에서 결제·입금 알림을 보내며 찍었어요)
+**▶ 1분 시연 영상:** [design/demo/pocket-manager-demo.mp4](design/demo/pocket-manager-demo.mp4) (컴퓨터용 테스트 화면에서 결제·입금 알림을 보내며 찍었어요. AI 비서 답변은 실제 Gemini 답변이고, 답을 기다리는 시간만 줄였어요)
 
 ## 할 수 있는 일
 
